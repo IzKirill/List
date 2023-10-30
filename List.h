@@ -52,5 +52,11 @@ ListErrors ListCtor(List* List, size_t Capacity, const char* list_name,
 ListErrors ListDtor(List* List);
 ListErrors ListDump(List* List,const size_t NLine, 
 					const char* NameFile, const char* Function);
+ListErrors ListInsert(List* List, const Elemt Value, const size_t Position);
+ListErrors ListErase(List* List, const size_t Position);
+
+ListErrors ListResize(List* List, const size_t Size, const Elemt Value);
+ListErrors ListResize(List* List, const size_t Size);
+
 
 #endif
