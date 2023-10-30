@@ -34,7 +34,7 @@ struct List {
 	size_t Tail;                       
 	size_t Size;     // нужно ли выравнивать?
 	size_t Capacity;
-	size_t FreeElement;
+	size_t Free;
 	char ErrorsInfo;
 	bool IsCtor;
 	bool IsDtor;	

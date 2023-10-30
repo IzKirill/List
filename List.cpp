@@ -24,14 +24,14 @@ ListErrors ListInsert(List* List, const Elemt Value, const size_t Position)
 	if(ListOK(List)) return LIST_ERROR;
 															// Recalloc add
 	if (List->Prev[Position] != PoisonValue) {
-		List->Data[List->FreeElement] = List->Data[Position];
-		List->Next[List->FreeElement] = List->Next[Position];
-		List->Prev[List->FreeElement] = Position;
+		List->Data[List->Free] = List->Data[Position];
+		List->Next[List->Free] = List->Next[Position];
+		List->Prev[List->Free] = Position;
 
-		List->Next[Position] = List->FreeElement;
+		List->Next[Position] = List->Free;
 		List->Data[Position] = Value;
 		
-		List->FreeElement = List->Next[List->FreeElement];
+		List->Free = List->Next[List->Free];
 	} else { // adding to the end of list or what?
 		List->Data[Position] = Value;
 		List->Next[Position] = List->Tail;
@@ -42,6 +42,8 @@ ListErrors ListInsert(List* List, const Elemt Value, const size_t Position)
 		List->Prev[List->Tail] = Position;
 	}
 	
+	List->Size += 1;
+
 	if(ListOK(List)) return LIST_ERROR;
 
 	return LIST_OK;
@@ -65,13 +67,166 @@ ListErrors ListErase(List* List, const size_t Position)  // return pos next elem
 		List->Data[Position] = PoisonValue;
 		List->Prev[Position] = PoisonValue;
 
-		List->Next[Position] = List->FreeElement;
-		List->FreeElement = Position;
+		List->Next[Position] = List->Free;
+		List->Free = Position;
 	} 
+
+	List->Size -= 1;
 
 	if(ListOK(List)) return LIST_ERROR;
 }
 
+ListErrors ListResize(List* List, const size_t Size, const Elemt Value)
+{
+	assert(List != nullptr);
+	
+	if(ListOK(List)) return LIST_ERROR;
+
+	if (Size > (List->Capacity - 2)) {
+
+		Elemt* TemporPtr = realloc(List->Data, sizeof(Elemt) * (Size + 2));  // auto free memory?
+		assert(TemporPtr != nullptr);
+
+		List->Data = TemporPtr;
+
+		int* TempPtr = realloc(List->Next, sizeof(int) * (Size + 2));
+		assert(TempPtr != nullptr);
+		
+		List->Next = TempPtr;
+
+		TempPtr = realloc(List->Prev, sizeof(int) * (Size + 2));
+		assert(TempPtr != nullptr);
+
+		List->Prev = TempPtr;
+		
+		for (size_t NumberElement = List->Capacity; NumberElement < (Size + 2) NumberElement++) {
+			List->Prev[NumberElement] = PoisonValue;
+			ListInsert(List, Value, NumberElement);
+		}
+
+		List->Size = Size;
+		List->Capacity = (Size + 2);
+
+	} else if (Size < (List->Capacity - 2)) {
+		Elemt* TempPtrData = realloc(List->Data, sizeof(Elemt) * (Size + 2));
+		assert(TempPtrData != nullptr);
+
+		int* TempPtrNext = realloc(List->Next, sizeof(int) * (Size + 2));
+		assert(TempPtrNext != nullptr);
+
+		int* TempPtrPrev = realloc(List->Prev, sizeof(int) * (Size + 2));
+		assert(TempPtrPrev != nullptr);
+
+		size_t TotalPosition = 0;
+
+		for(size_t NumberElement = 0; NumberElemnt < List->Capacity && TotalPosition < (Size + 2); NumberElemnt++) {
+			if (List->Prev[NumberElement] != PoisonValue) {
+				TempPtrData[TotalPosition] = List->Data[NumberElement];
+				TempPtrNext[TotalPosition] = List->Next[NumberElement];
+				TempPtrPrev[TotalPosition] = List->Prev[NumberElement];
+
+				TotalPosition++;
+			}
+		}
+
+		List->Data = TempPtrData;
+		List->Next = TempPtrNext;
+		List->Prev = TempPtrPrev;
+
+		for (; TotalPosition < (Size + 2) TotalPosition++) {
+			List->Prev[TotalPosition] = PoisonValue;
+			ListInsert(List, Value, TotalPosition);
+		}
+
+		List->Size = Size
+		List->Capacity = Size + 2;
+
+	} else {
+		// strange request
+	}
+
+	if(ListOK(List)) return LIST_ERROR;
+
+}
+
+ListErrors ListResize(List* List, const size_t Size)
+{
+	assert(List != nullptr);
+
+	if(ListOK(List)) return LIST_ERROR;
+
+	if (Size > (List->Capacity - 2)) {
+
+		Elemt* TemporPtr = realloc(List->Data, sizeof(Elemt) * (Size + 2));  // auto free memory?
+		assert(TemporPtr != nullptr);
+
+		List->Data = TemporPtr;
+
+		int* TempPtr = realloc(List->Next, sizeof(int) * (Size + 2));
+		assert(TempPtr != nullptr);
+		
+		List->Next = TempPtr;
+
+		TempPtr = realloc(List->Prev, sizeof(int) * (Size + 2));
+		assert(TempPtr != nullptr);
+
+		List->Prev = TempPtr;
+		
+		for (size_t NumberElement = List->Capacity; NumberElement < (Size + 2) NumberElement++) {
+			List->Prev[NumberElement] = PoisonValue;
+			List->Data[NumberElement] = PoisonValue;
+
+			List->Next[NumberElement] = List->Free;
+			List->Free = Position;	
+		}
+
+		List->Capacity = (Size + 2);
+
+	} else if (Size < (List->Capacity - 2)) {
+		Elemt* TempPtrData = realloc(List->Data, sizeof(Elemt) * (Size + 2));
+		assert(TempPtrData != nullptr);
+
+		int* TempPtrNext = realloc(List->Next, sizeof(int) * (Size + 2));
+		assert(TempPtrNext != nullptr);
+
+		int* TempPtrPrev = realloc(List->Prev, sizeof(int) * (Size + 2));
+		assert(TempPtrPrev != nullptr);
+
+		size_t TotalPosition = 0;
+
+		for(size_t NumberElement = 0; NumberElemnt < List->Capacity && TotalPosition < (Size + 2); NumberElemnt++) {
+			if (List->Prev[NumberElement] != PoisonValue) {
+				TempPtrData[TotalPosition] = List->Data[NumberElement];
+				TempPtrNext[TotalPosition] = List->Next[NumberElement];
+				TempPtrPrev[TotalPosition] = List->Prev[NumberElement];
+
+				TotalPosition++;
+			}
+		}
+
+		List->Data = TempPtrData;
+		List->Next = TempPtrNext;
+		List->Prev = TempPtrPrev;
+
+		for (; TotalPosition < (Size + 2) TotalPosition++) {
+			List->Prev[TotalPosition] = PoisonValue;
+			List->Data[TotalPosition] = PoisonValue;
+
+			List->Next[NumberElement] = List->Free;
+			List->Free = Position;
+		}
+
+		List->Size = Size
+		List->Capacity = Size + 2;
+
+	} else {
+		// strange request
+	}
+
+
+	if(ListOK(List)) return LIST_ERROR;
+
+}
 
 ListErrors ListCtor(List* List, size_t Capacity, const char* list_name,
 				    const size_t birth_line, const char* birth_file, const char* birth_function) 
@@ -116,7 +271,7 @@ ListErrors ListCtor(List* List, size_t Capacity, const char* list_name,
 	List->Next[List->Tail] = NextTailIndicator;
 	List->Prev[List->Tail] = List->Head;
 
-	List->FreeElement = 2;
+	List->Free = 2;
 	List->Size = 0;
 
 	List->ErrorsInfo = 0;
@@ -145,7 +300,7 @@ ListErrors ListDtor(List* List)
 	free(List->Next);
 	free(List->Prev);
 	List->Capacity = PoisonValue;
-	List->FreeElement = PoisonValue;
+	List->Free = PoisonValue;
 	List->Head = PoisonValue;
 	List->Tail = PoisonValue;
 	List->Size = PoisonValue;
@@ -192,7 +347,7 @@ ListErrors ListDump(List* List, const size_t NLine,
 	printf("    List Capacity = %ld\n", List->Capacity);
 	printf("    List Head = %ld\n", List->Head);
 	printf("    List Tail = %ld\n", List->Tail);
-	printf("    List Free Element = %ld\n", List->FreeElement);
+	printf("    List Free Element = %ld\n", List->Free);
 
 	printf(" List Data[%p]\n    {\n        ", List->Data);
 	for (size_t NumberElement = 0; NumberElement < List->Capacity; NumberElement++) {
