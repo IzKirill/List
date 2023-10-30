@@ -5,6 +5,73 @@
 #include "List.h"
 
 FILE* LogFile = 0;
+static ListErrors ListOK(List* List);
+static void EndProgramm(void);
+
+static void EndProgramm(void) 
+{
+	printf("List log file successfully closed\n");
+	fclose(LogFile);	
+}
+
+ListErrors ListInsert(List* List, const Elemt Value, const size_t Position)
+{
+	assert(List != nullptr);
+	assert(Position < List->Capacity);
+	assert(Position != 0);
+	assert(Position != 1);
+
+	if(ListOK(List)) return LIST_ERROR;
+															// Recalloc add
+	if (List->Prev[Position] != PoisonValue) {
+		List->Data[List->FreeElement] = List->Data[Position];
+		List->Next[List->FreeElement] = List->Next[Position];
+		List->Prev[List->FreeElement] = Position;
+
+		List->Next[Position] = List->FreeElement;
+		List->Data[Position] = Value;
+		
+		List->FreeElement = List->Next[List->FreeElement];
+	} else { // adding to the end of list or what?
+		List->Data[Position] = Value;
+		List->Next[Position] = List->Tail;
+		List->Prev[Position] = List->Prev[List->Tail];
+
+		List->Next[List->Prev[List->Tail]] = Position;
+
+		List->Prev[List->Tail] = Position;
+	}
+	
+	if(ListOK(List)) return LIST_ERROR;
+
+	return LIST_OK;
+}
+
+ListErrors ListErase(List* List, const size_t Position)  // return pos next element ?
+{
+	assert(List != nullptr);
+	assert(Position < List->Capacity);
+	assert(Position != 0);   // copypaste
+	assert(Position != 1);
+
+	if(ListOK(List)) return LIST_ERROR;
+
+	if (List->Prev[Position] == PoisonValue) {
+		// Error
+	} else {
+		List->Next[List->Prev[Position]] = List->Next[Position];
+		List->Prev[List->Next[Position]] = List->Prev[Position];
+
+		List->Data[Position] = PoisonValue;
+		List->Prev[Position] = PoisonValue;
+
+		List->Next[Position] = List->FreeElement;
+		List->FreeElement = Position;
+	} 
+
+	if(ListOK(List)) return LIST_ERROR;
+}
+
 
 ListErrors ListCtor(List* List, size_t Capacity, const char* list_name,
 				    const size_t birth_line, const char* birth_file, const char* birth_function) 
