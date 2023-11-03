@@ -2,15 +2,17 @@
 #include <malloc.h>
 #include <assert.h>
 #include <stdlib.h>
+#include "DotList.h"
 #include "List.h"
 
 FILE* LogFile = 0;
 static ListErrors ListOK(List* List);
 static void EndProgramm(void);
+static size_t Counter = 1;
 
 static void EndProgramm(void) 
 {
-	printf("List log file successfully closed\n");
+	fprintf(LogFile,  "List log file successfully closed\n");
 	fclose(LogFile);	
 }
 
@@ -57,16 +59,24 @@ ListErrors ListInsert(List* List, const Elemt Value, const size_t Position)
 
 	if(ListOK(List)) return LIST_ERROR;
 
+
+	fprintf(LogFile, "Add Value %d on position %ld\n", Value, Position);
+	LIST_DUMP(List);
+
 	return LIST_OK;
 }
 
-ListErrors ListPushFront (List* List, const Elemt Value) 
+size_t ListPushFront (List* List, const Elemt Value) 
 {
 	assert(List != nullptr);
 
 	if(ListOK(List)) return LIST_ERROR;
+	
+	if ((List->Size + 2) >= List->Capacity)
+		ListResize(List, List->Size * 2);
 
 	size_t NextFree = List->Next[List->Free];
+	size_t Position = List->Free;
 
 	List->Data[List->Free] = Value;
 	List->Next[List->Free] = List->Next[List->Head];
@@ -82,7 +92,92 @@ ListErrors ListPushFront (List* List, const Elemt Value)
 
 	if(ListOK(List)) return LIST_ERROR;
 
-	return LIST_OK;
+	fprintf(LogFile, "Push %d at the front\n", Value);
+	LIST_DUMP(List);
+
+	return Position;
+}
+
+size_t ListPushBack (List* List, const Elemt Value)
+{
+	assert(List != nullptr);
+
+	if ((List->Size + 2) >= List->Capacity)
+		ListResize(List, List->Size * 2);
+
+	size_t Position = List->Free;
+	size_t NextFree = List->Next[List->Free];
+
+	List->Data[List->Free] = Value;
+	List->Next[List->Free] = List->Tail;
+	List->Prev[List->Free] = List->Prev[List->Tail];
+
+	List->Prev[List->Tail] = List->Free;
+
+	List->Next[List->Prev[List->Free]] = List->Free;
+
+	List->Free = NextFree;
+
+	List->Size += 1; 
+
+	if(ListOK(List)) return LIST_ERROR;
+
+	fprintf(LogFile, "Push %d at the back\n", Value);
+	LIST_DUMP(List);
+
+	return Position;
+}
+
+size_t ListPopFront (List* List)
+{
+	assert(List != nullptr);
+
+	if ((List->Size + 2) >= List->Capacity)
+		ListResize(List, List->Size * 2);
+
+	size_t Position = List->Next[List->Head];
+	size_t Value = List->Data[Position];
+
+	List->Data[Position] = PoisonValue;
+	List->Prev[Position] = PoisonValue;
+
+	List->Next[List->Head] = List->Next[Position];
+
+	List->Prev[List->Next[List->Head]] = List->Head;
+
+	List->Next[Position] = List->Free;
+	List->Free = Position;
+
+	fprintf(LogFile, "Pop %ld at the front\n", Value);
+	LIST_DUMP(List);
+
+	return Value;
+}
+
+size_t ListPopBack (List* List)
+{
+	assert(List != nullptr);
+
+	if ((List->Size + 2) >= List->Capacity)
+		ListResize(List, List->Size * 2);
+
+	size_t Position = List->Prev[List->Tail];
+	size_t Value = List->Data[Position];
+
+	List->Prev[List->Tail] = List->Prev[Position];
+
+	List->Data[Position] = PoisonValue;
+	List->Prev[Position] = PoisonValue;
+
+	List->Next[List->Prev[List->Tail]] = List->Tail;
+
+	List->Next[Position] = List->Free;
+	List->Free = Position;
+
+	fprintf(LogFile, "Pop %ld at the back\n", Value);
+	LIST_DUMP(List);
+
+	return Value;
 }
 
 ListErrors ListErase(List* List, const size_t Position)  // return pos next element ?
@@ -110,6 +205,9 @@ ListErrors ListErase(List* List, const size_t Position)  // return pos next elem
 	List->Size -= 1;
 
 	if(ListOK(List)) return LIST_ERROR;
+
+	fprintf(LogFile,"Delete element on position %ld\n", Position);
+	LIST_DUMP(List);
 
 	return LIST_OK;
 
@@ -196,6 +294,9 @@ ListErrors ListResize(List* List, const size_t Size, const Elemt Value)
 
 	if(ListOK(List)) return LIST_ERROR;
 
+	fprintf(LogFile, "Resize list to size %ld and fill with element value %d\n", Size, Value);
+	LIST_DUMP(List);
+
 	return LIST_OK;
 }
 
@@ -252,7 +353,7 @@ ListErrors ListResize(List* List, const size_t Size)
 					TempMassivePrev[List->Tail] = TotalPosition;
 				}
 
-				printf("%lu \n", TotalPosition);
+				fprintf(LogFile,  "%lu \n", TotalPosition);
 				TotalPosition++;
 				}
 		}
@@ -295,6 +396,9 @@ ListErrors ListResize(List* List, const size_t Size)
 	}
 
 	if(ListOK(List)) return LIST_ERROR;
+
+	fprintf(LogFile, "Resize list to size %ld\n", Size);
+	LIST_DUMP(List);
 
 	return LIST_OK;
 }
@@ -349,6 +453,9 @@ ListErrors ListCtor(List* List, size_t Capacity, const char* list_name,
 
 	if (ListOK(List)) return LIST_ERROR;
 
+	fprintf(LogFile, "Fill list primary values\n");
+	LIST_DUMP(List);
+
 	return LIST_OK;
 }
 
@@ -396,7 +503,7 @@ ListErrors ListOK(List* List)
 	for (size_t NumberElement = 0; NumberElement < List->Size; NumberElement) {
 		List->Prev[List->Next[List->Head]] = List->Head;
 
-	}
+	} //
 }
 
 ListErrors ListDump(List* List, const size_t NLine, 
@@ -409,63 +516,92 @@ ListErrors ListDump(List* List, const size_t NLine,
 	assert(List->IsCtor == true);
 	assert(List->IsDtor == false);
 	
-	printf("List[%p] %s from %s(%ld) %s ", List, List->Info.list_name,
+	fprintf(LogFile, "<pre>\n");
+
+	fprintf(LogFile,  "List[%p] %s from %s(%ld) %s ", List, List->Info.list_name,
 	List->Info.birth_file, List->Info.birth_line, List->Info.birth_function);
 
-	printf("called from %s(%ld) %s.\n", NameFile, NLine, Function);
+	fprintf(LogFile,  "called from %s(%ld) %s.\n", NameFile, NLine, Function);
 
-	printf("{\n    Number Elements = %ld\n", List->Size);
-	printf("    List Capacity = %ld\n", List->Capacity);
-	printf("    List Head = %ld\n", List->Head);
-	printf("    List Tail = %ld\n", List->Tail);
-	printf("    List Free Element = %ld\n", List->Free);
+	fprintf(LogFile,  "{\n    Number Elements = %ld\n", List->Size);
+	fprintf(LogFile,  "    List Capacity = %ld\n", List->Capacity);
+	fprintf(LogFile,  "    List Head = %ld\n", List->Head);
+	fprintf(LogFile,  "    List Tail = %ld\n", List->Tail);
+	fprintf(LogFile,  "    List Free Element = %ld\n", List->Free);
 
-	printf("    List Data[%p]\n    {\n        ", List->Data);
+	fprintf(LogFile,  "    List Data[%p]\n    {\n        ", List->Data);
 	for (size_t NumberElement = 0; NumberElement < List->Capacity; NumberElement++) {
-		printf("%6ld ", NumberElement);
+		fprintf(LogFile,  "%6ld ", NumberElement);
 	}
-	printf("\n        ");
+	fprintf(LogFile,  "\n        ");
 	for (size_t NumberElement = 0; NumberElement < List->Capacity; NumberElement++) {
 		if (List->Data[NumberElement] != PoisonValue) {
-			printf("%6d ", List->Data[NumberElement]);
+			fprintf(LogFile,  "%6d ", List->Data[NumberElement]);
 		} else {
-			printf("Poison ");
+			fprintf(LogFile,  "Poison ");
 		}
 	}
-	printf("\n    }\n");
+	fprintf(LogFile,  "\n    }\n");
 
-	printf("    List Next Element[%p]\n    {\n        ", List->Next);
+	fprintf(LogFile,  "    List Next Element[%p]\n    {\n        ", List->Next);
 	for (size_t NumberElement = 0; NumberElement < List->Capacity; NumberElement++) {
-		printf("%6ld ", NumberElement);
+		fprintf(LogFile,  "%6ld ", NumberElement);
 	}
-	printf("\n        ");
+	fprintf(LogFile,  "\n        ");
 	for (size_t NumberElement = 0; NumberElement < List->Capacity; NumberElement++) {
 		if (List->Next[NumberElement] != PoisonValue) {
-			printf("%6d ", List->Next[NumberElement]);
+			fprintf(LogFile,  "%6d ", List->Next[NumberElement]);
 		} else {
-			printf("Poison ");
+			fprintf(LogFile,  "Poison ");
 		}
 	}  // copypaste
-	printf("\n    }\n");
+	fprintf(LogFile,  "\n    }\n");
 
-	printf("    List Previous Element[%p]\n    {\n        ", List->Prev);
+	fprintf(LogFile,  "    List Previous Element[%p]\n    {\n        ", List->Prev);
 	for (size_t NumberElement = 0; NumberElement < List->Capacity; NumberElement++) {
-		printf("%6ld ", NumberElement);
+		fprintf(LogFile,  "%6ld ", NumberElement);
 	}
-	printf("\n        ");
+	fprintf(LogFile,  "\n        ");
 	for (size_t NumberElement = 0; NumberElement < List->Capacity; NumberElement++) {
 		if (List->Prev[NumberElement] != PoisonValue) {
-			printf("%6d ", List->Prev[NumberElement]);
+			fprintf(LogFile,  "%6d ", List->Prev[NumberElement]);
 		} else {
-			printf("Poison ");
+			fprintf(LogFile,  "Poison ");
 		}
 	}
-	printf("\n    }\n");
-	printf("}\n ");
+	fprintf(LogFile, "\n    }\n");
+	fprintf(LogFile, "}\n "); 
 
-	int InputNumber = 0;
-	scanf("%d", &InputNumber);
-	system("clear");
+#ifndef NOPNG
+	fprintf(LogFile, "\n <img src = List%ld.png width 25%%>\n", 100 + Counter);
+	
+	FILE* DotFile = fopen(NameDotFile,"w");
+	fprintf(DotFile, "digraph G {\n");
+	DRAW_LIST_STRUCT();
+	DRAW_HEAD();
+	DRAW_TAIL();
+
+	for (size_t NumberElement = 2, Size = 1; NumberElement < List->Capacity; NumberElement++) {
+		if (List->Prev[NumberElement] == PoisonValue) {
+			DRAW_FREE_ELEMENT(NumberElement);
+		}
+		else {
+			DRAW_LIST_ELEMENT(NumberElement);
+			Size++;
+		}
+	}
+	fprintf(DotFile, "}");
+
+	fclose(DotFile);
+	
+	char GeneratePng[42] = "dot -T png ListDot.dot -o List100.png";
+	GeneratePng[32] = '0' + Counter % 10;
+	if (Counter > 9) {
+		GeneratePng[31] = '0' + Counter / 10;}
+
+	system(GeneratePng);
+	Counter++;
+#endif
 
 	return LIST_OK;
 }

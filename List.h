@@ -8,7 +8,8 @@
 
 #define LIST_DUMP(List) ListDump(List,__LINE__,__FILE__,__PRETTY_FUNCTION__)
 
-const char NameLogFile[] = "ListLogs.txt";
+const char NameLogFile[] = "ListLogs.htm";
+const char NameDotFile[] = "ListDot.dot";
 
 const int PoisonValue = 2399229923;
 
@@ -55,8 +56,13 @@ ListErrors ListDump(List* List,const size_t NLine,
 ListErrors ListInsert(List* List, const Elemt Value, const size_t Position);
 ListErrors ListErase(List* List, const size_t Position);
 
-ListErrors ListResize(List* List, const size_t Size, const Elemt Value);
-ListErrors ListResize(List* List, const size_t Size);
+//ListErrors ListResize(List* List, const size_t Size, const Elemt Value);
+ListErrors ListResize(List* List, const size_t Size); // under add
 
+size_t ListPushFront(List* List, const Elemt Value); 
+size_t ListPushBack(List* List, const Elemt Value); 
+
+size_t ListPopFront(List* List); 
+size_t ListPopBack(List* List); 
 
 #endif
