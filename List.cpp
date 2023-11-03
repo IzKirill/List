@@ -6,8 +6,10 @@
 #include "List.h"
 
 FILE* LogFile = 0;
+
 static ListErrors ListOK(List* List);
 static void EndProgramm(void);
+
 static size_t Counter = 1;
 
 static void EndProgramm(void) 
@@ -24,7 +26,10 @@ ListErrors ListInsert(List* List, const Elemt Value, const size_t Position)
 	assert(Position != 1);
 
 	if(ListOK(List)) return LIST_ERROR;
-															// Recalloc add
+
+	if ((List->Size + 2) >= List->Capacity)
+		ListResize(List, List->Size * 2);
+
 	if (List->Prev[Position] != PoisonValue) {
 		size_t NextFree = List->Next[List->Free];
 
@@ -279,10 +284,15 @@ ListErrors ListResize(List* List, const size_t Size, const Elemt Value)
 		List->Data = TempPtrData;
 		List->Next = TempPtrNext;
 		List->Prev = TempPtrPrev;
-		
+
+		List->Free = List->Tail;
+
 		for (; TotalPosition < (Size + 2); TotalPosition++) {
 			List->Prev[TotalPosition] = PoisonValue;
-			ListInsert(List, Value, TotalPosition);
+			List->Data[TotalPosition] = PoisonValue;
+
+			List->Next[TotalPosition] = List->Free;
+			List->Free = TotalPosition;
 		}
 
 		List->Size = Size;
@@ -605,9 +615,3 @@ ListErrors ListDump(List* List, const size_t NLine,
 
 	return LIST_OK;
 }
-
-
-
-
-
-
