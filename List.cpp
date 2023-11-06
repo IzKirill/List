@@ -24,41 +24,26 @@ ListErrors ListInsert(List* List, const Elemt Value, const size_t Position)
 	assert(Position < List->Capacity);
 	assert(Position != 0);
 	assert(Position != 1);
+	assert(List->Prev[Position] != PoisonValue);
 
 	if(ListOK(List)) return LIST_ERROR;
 
-	if ((List->Size + 2) >= List->Capacity)
+	if ((List->Size + 2) == List->Capacity) {
 		ListResize(List, List->Size * 2);
+	}
 
-	if (List->Prev[Position] != PoisonValue) {
-		size_t NextFree = List->Next[List->Free];
+	size_t NextFree = List->Next[List->Free];
 
-		List->Data[List->Free] = List->Data[Position];
-		List->Next[List->Free] = List->Next[Position];
-		List->Prev[List->Free] = Position;
+	List->Data[List->Free] = List->Data[Position];
+	List->Next[List->Free] = List->Next[Position];
+	List->Prev[List->Free] = Position;
 
-		List->Prev[List->Next[Position]] = List->Free;
+	List->Prev[List->Next[Position]] = List->Free;
 
-		List->Next[Position] = List->Free;
-		List->Data[Position] = Value;
+	List->Next[Position] = List->Free;
+	List->Data[Position] = Value;
 		
-		List->Free = NextFree;  
-	} else {
-		return LIST_ERROR;
-	}	/*else { // adding to the end of list or what?
-		
-		if (Position == List->Free) {
-			List->Free = List->Next[List->Free];
-		}
-
-		List->Data[Position] = Value;
-		List->Next[Position] = List->Tail;
-		List->Prev[Position] = List->Prev[List->Tail];
-
-		List->Next[List->Prev[List->Tail]] = Position;
-
-		List->Prev[List->Tail] = Position;
-	} */ // запретить так делать
+	List->Free = NextFree;  
 	
 	List->Size += 1;
 
@@ -75,7 +60,7 @@ size_t ListPushFront (List* List, const Elemt Value)
 	assert(List != nullptr);
 
 	if(ListOK(List)) return LIST_ERROR;
-	
+		
 	if ((List->Size + 2) >= List->Capacity)
 		ListResize(List, List->Size * 2);
 
@@ -136,26 +121,14 @@ size_t ListPopFront (List* List)
 {
 	assert(List != nullptr);
 
-	if ((List->Size + 2) >= List->Capacity)
-		ListResize(List, List->Size * 2);
+	if(ListOK(List)) return LIST_ERROR;
 
-	size_t Position = List->Next[List->Head];
-	size_t Value = List->Data[Position];
-
-	List->Data[Position] = PoisonValue;
-	List->Prev[Position] = PoisonValue;
-
-	List->Next[List->Head] = List->Next[Position];
-
-	List->Prev[List->Next[List->Head]] = List->Head;
-
-	List->Next[Position] = List->Free;
-	List->Free = Position;
-
-	List->Size--;
+	Elemt Value = List->Data[List->Next[List->Head]];
 
 	fprintf(LogFile, "Pop %ld at the front\n", Value);
-	LIST_DUMP(List);
+	ListErase(List, List->Next[List->Head]);
+
+	if(ListOK(List)) return LIST_ERROR;
 
 	return Value;
 }
@@ -164,26 +137,14 @@ size_t ListPopBack (List* List)
 {
 	assert(List != nullptr);
 
-	if ((List->Size + 2) >= List->Capacity)
-		ListResize(List, List->Size * 2);
+	if(ListOK(List)) return LIST_ERROR;
 
-	size_t Position = List->Prev[List->Tail];
-	size_t Value = List->Data[Position];
+	Elemt Value = List->Data[List->Prev[List->Tail]];
 
-	List->Prev[List->Tail] = List->Prev[Position];
+	fprintf(LogFile, "Pop %d at the back\n", Value);	
+	ListErase(List, List->Prev[List->Tail]);
 
-	List->Data[Position] = PoisonValue;
-	List->Prev[Position] = PoisonValue;
-
-	List->Next[List->Prev[List->Tail]] = List->Tail;
-
-	List->Next[Position] = List->Free;
-	List->Free = Position;
-
-	List->Size--;
-
-	fprintf(LogFile, "Pop %ld at the back\n", Value);
-	LIST_DUMP(List);
+	if(ListOK(List)) return LIST_ERROR;
 
 	return Value;
 }
@@ -194,22 +155,19 @@ ListErrors ListErase(List* List, const size_t Position)  // return pos next elem
 	assert(Position < List->Capacity);
 	assert(Position != 0);   // copypaste
 	assert(Position != 1);
+	assert(List->Prev[Position] != PoisonValue);
 
 	if(ListOK(List)) return LIST_ERROR;
 
-	if (List->Prev[Position] == PoisonValue) {
-		// Error
-	} else {
-		List->Next[List->Prev[Position]] = List->Next[Position];
-		List->Prev[List->Next[Position]] = List->Prev[Position];
+	List->Next[List->Prev[Position]] = List->Next[Position];
+	List->Prev[List->Next[Position]] = List->Prev[Position];
 
-		List->Data[Position] = PoisonValue;
-		List->Prev[Position] = PoisonValue;
+	List->Data[Position] = PoisonValue;
+	List->Prev[Position] = PoisonValue;
 
-		List->Next[Position] = List->Free;
-		List->Free = Position;
-	} 
-
+	List->Next[Position] = List->Free;
+	List->Free = Position;
+	 
 	List->Size -= 1;
 
 	if(ListOK(List)) return LIST_ERROR;
@@ -218,7 +176,6 @@ ListErrors ListErase(List* List, const size_t Position)  // return pos next elem
 	LIST_DUMP(List);
 
 	return LIST_OK;
-
 }
 
 ListErrors ListResize(List* List, const size_t Size)
@@ -632,7 +589,7 @@ ListErrors ListDump(List* List, const size_t NLine,
 	fprintf(LogFile, "\n    }\n");
 	fprintf(LogFile, "}\n "); 
 
-#ifndef NOPNG
+#ifndef NO_PNG
 	fprintf(LogFile, "\n <img src = DotPng/List%ld.png width 25%%>\n", 100 + Counter);
 	
 	FILE* DotFile = fopen(NameDotFile,"w");
