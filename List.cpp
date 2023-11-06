@@ -3,12 +3,12 @@
 #include <assert.h>
 #include <stdlib.h>
 #include "DotList.h"
-#include "List.h"
+#include "Listh"
 
 #define REALLOC_LIST(List, Size) ReallocList((List), (Size), __LINE__,   \
 						__FILE__,__PRETTY_FUNCTION__)
 
-static FILE* LogFile = 0;
+FILE* LogFile = 0;
 
 static void EndProgramm(void);
 
@@ -52,6 +52,25 @@ ListErrors ListInsert(List* List, const Elemt Value, const size_t Position)
 	if (Error) return Error;
 
 	fprintf(LogFile, "Add Value %d on position %ld\n", Value, Position);
+	LIST_DUMP(List);
+
+	return LIST_OK;
+}
+
+ListErrors ListInsert(List* List, const size_t Position, 
+					  const size_t CountElements, const size_t Value)
+{
+	ListErrors Error = CHECK_LIST_AND_POSITION(List, Position);
+	if (Error) return Error;
+
+	for (size_t NumberElements = CountElements; NumberElements > 0; NumberElements--) {
+		ListInsert(List, Value, Position);
+	}
+
+	Error = LIST_OK(List);
+	if (Error) return Error;
+
+	fprintf(LogFile, "Add %ld elements with value %d from position %ld\n", CountElements Value, Position);
 	LIST_DUMP(List);
 
 	return LIST_OK;
@@ -153,10 +172,12 @@ size_t ListPopBack (List* List)
 	return Value;
 }
 
-ListErrors ListErase(List* List, const size_t Position)  // return pos next element ?
+size_t ListErase(List* List, const size_t Position)  
 {
 	ListErrors Error = CHECK_LIST_AND_POSITION(List, Position);
 	if(Error) return Error;
+
+	size_t NextElement = List->Next[List->Position];
 
 	List->Next[List->Prev[Position]] = List->Next[Position];
 	List->Prev[List->Next[Position]] = List->Prev[Position];
@@ -173,6 +194,28 @@ ListErrors ListErase(List* List, const size_t Position)  // return pos next elem
 	if (Error) return Error;
 
 	fprintf(LogFile,"Delete element on position %ld\n", Position);
+	LIST_DUMP(List);
+
+	return NextElement;
+}
+
+ListErrors ListErase(List* List, const size_t Begin, const size_t End)
+{
+	ListErrors Error1 = CHECK_LIST_AND_POSITION(List, Begin);
+	ListErrors Error2 = CHECK_LIST_AND_POSITION(List, End);
+	if(Error1 || Error2) return (Error1 != LIST_OK) ? Error1 : Error2;
+
+	while (Begin < End) {
+		if (List->Prev[Begin] != PoisonValue) {
+			ListErase(List, Begin);
+		}
+		Begin++;
+	}	
+
+	Error1 = LIST_OK(List);
+	if (Error1) return Error1;
+
+	fprintf(LogFile,"Delete element from position %ld to position %ld\n", Begin, End);
 	LIST_DUMP(List);
 
 	return LIST_OK;
@@ -419,10 +462,10 @@ ListErrors ListClear(List* List)
 ListErrors ListCtor(List* List, size_t Capacity, const char* list_name,
 				    const size_t birth_line, const char* birth_file, const char* birth_function) 
 {    
-	assert(List != nullptr);   
+	CHECKCONDITION(List == nullptr, LIST_NULLPTR, "List is null ptr");
  
 	LogFile = fopen(NameLogFile, "w");
-	assert(LogFile != nullptr);
+	CHECKCONDITION(LogFile == nullptr, CANT_CREATE_LOGS, "Can not create log file");
 	atexit(EndProgramm);
 	
 	List->IsCtor = true;
@@ -505,7 +548,6 @@ ListErrors ListOK(List* List, const size_t Line,
 	if (LogFile == nullptr) {
 		LogFile = fopen(NameLogFile, "w");		
 	}
-
 	if (List == nullptr) {
 		PRINT_ERROR("List is null ptr")
 		return LIST_NULLPTR;
@@ -518,7 +560,6 @@ ListErrors ListOK(List* List, const size_t Line,
 		PRINT_ERROR("This list have already deleted")
 		return LIST_IS_DTOR;
 	}
-
 	if (List->Capacity == 0) {
 		PRINT_ERROR("List capacity equal zero")
 		List->ErrorsInfo |= NULL_CAPACITY;
