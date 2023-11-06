@@ -67,4 +67,17 @@ size_t ListPushBack(List* List, const Elemt Value);
 size_t ListPopFront(List* List); 
 size_t ListPopBack(List* List); 
 
+size_t ListBegin()
+size_t ListEnd()
+
+bool ListEmpty()
+
+size_t ListSize()
+size_t ListCapacity()
+
+Elemt ListFront()
+Elemt ListBack()
+
+ListErrors ListClear()
+// insert erase
 #endif
