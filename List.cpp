@@ -393,6 +393,61 @@ ListErrors ListResize(List* List, const size_t Size, const Elemt Value)
 	return LIST_OK;
 }
 
+size_t ListBegin(List* List)
+{
+	if(LIST_OK(List)) return LIST_ERROR;
+
+	return List->Next[List->Head];
+}
+
+size_t ListEnd(List* List)
+{
+	if(LIST_OK(List)) return LIST_ERROR;
+
+	return List->Prev[List->Tail];
+}
+
+bool ListEmpty(List* List) 
+{
+	if(LIST_OK(List)) return LIST_ERROR;
+
+	return List->Size;
+}
+
+size_t ListSize(List* List)
+{
+	if(LIST_OK(List)) return LIST_ERROR;
+
+	return List->Size;
+}
+
+size_t ListCapacity(List* List)
+{
+	if(LIST_OK(List)) return LIST_ERROR;
+
+	return List->Capacity;
+}
+
+Elemt ListFront(List* List)
+{
+	if(LIST_OK(List)) return LIST_ERROR;
+
+	return List->Data[List->Next[List->Head]];
+}
+
+Elemt ListBack(List* List)
+{
+	if(LIST_OK(List)) return LIST_ERROR;
+
+	return List->Data[List->Prev[List->Tail]];
+}
+
+ListErrors ListClear(List* List)
+{
+	if(LIST_OK(List)) return LIST_ERROR;
+
+	Resize(List, 0);
+}
 
 ListErrors ListCtor(List* List, size_t Capacity, const char* list_name,
 				    const size_t birth_line, const char* birth_file, const char* birth_function) 
