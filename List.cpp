@@ -5,28 +5,27 @@
 #include "DotList.h"
 #include "List.h"
 
+#define REALLOC_LIST(List, Size) ReallocList((List), (Size), __LINE__,   \
+						__FILE__,__PRETTY_FUNCTION__)
+
 static FILE* LogFile = 0;
 
-static ListErrors ListOK(List* List);
 static void EndProgramm(void);
+
+static ListErrors ReallocList(List* List, const size_t Size, 
+				const size_t Line, const char* File, const char* Function);
 
 static size_t Counter = 1;
 
 static void EndProgramm(void) 
 {
-	fprintf(LogFile,  "List log file successfully closed\n");
+	fprintf(LogFile,  "<font color=\"green\">List log file successfully closed</font>\n");
 	fclose(LogFile);	
 }
 
 ListErrors ListInsert(List* List, const Elemt Value, const size_t Position)
 {
-	assert(List != nullptr);
-	assert(Position < List->Capacity);
-	assert(Position != 0);
-	assert(Position != 1);
-	assert(List->Prev[Position] != PoisonValue);
-
-	if(ListOK(List)) return LIST_ERROR;
+	if(CHECK_LIST_AND_POSITION(List, Position)) return LIST_ERROR;
 
 	if ((List->Size + 2) == List->Capacity) {
 		ListResize(List, List->Size * 2);
@@ -47,7 +46,7 @@ ListErrors ListInsert(List* List, const Elemt Value, const size_t Position)
 	
 	List->Size += 1;
 
-	if(ListOK(List)) return LIST_ERROR;
+	if(LIST_OK(List)) return LIST_ERROR;
 
 	fprintf(LogFile, "Add Value %d on position %ld\n", Value, Position);
 	LIST_DUMP(List);
@@ -57,9 +56,7 @@ ListErrors ListInsert(List* List, const Elemt Value, const size_t Position)
 
 size_t ListPushFront (List* List, const Elemt Value) 
 {
-	assert(List != nullptr);
-
-	if(ListOK(List)) return LIST_ERROR;
+	if(LIST_OK(List)) return LIST_ERROR;
 		
 	if ((List->Size + 2) >= List->Capacity)
 		ListResize(List, List->Size * 2);
@@ -79,7 +76,7 @@ size_t ListPushFront (List* List, const Elemt Value)
 
 	List->Size += 1;
 
-	if(ListOK(List)) return LIST_ERROR;
+	if(LIST_OK(List)) return LIST_ERROR;
 
 	fprintf(LogFile, "Push %d at the front\n", Value);
 	LIST_DUMP(List);
@@ -89,7 +86,7 @@ size_t ListPushFront (List* List, const Elemt Value)
 
 size_t ListPushBack (List* List, const Elemt Value)
 {
-	assert(List != nullptr);
+	if(LIST_OK(List)) return LIST_ERROR;
 
 	if ((List->Size + 2) >= List->Capacity)
 		ListResize(List, List->Size * 2);
@@ -109,7 +106,7 @@ size_t ListPushBack (List* List, const Elemt Value)
 
 	List->Size += 1; 
 
-	if(ListOK(List)) return LIST_ERROR;
+	if(LIST_OK(List)) return LIST_ERROR;
 
 	fprintf(LogFile, "Push %d at the back\n", Value);
 	LIST_DUMP(List);
@@ -119,45 +116,35 @@ size_t ListPushBack (List* List, const Elemt Value)
 
 size_t ListPopFront (List* List)
 {
-	assert(List != nullptr);
-
-	if(ListOK(List)) return LIST_ERROR;
+	if(LIST_OK(List)) return LIST_ERROR;
 
 	Elemt Value = List->Data[List->Next[List->Head]];
 
-	fprintf(LogFile, "Pop %ld at the front\n", Value);
+	fprintf(LogFile, "Pop %d at the front\n", Value);
 	ListErase(List, List->Next[List->Head]);
 
-	if(ListOK(List)) return LIST_ERROR;
+	if(LIST_OK(List)) return LIST_ERROR;
 
 	return Value;
 }
 
 size_t ListPopBack (List* List)
 {
-	assert(List != nullptr);
-
-	if(ListOK(List)) return LIST_ERROR;
+	if(LIST_OK(List)) return LIST_ERROR;
 
 	Elemt Value = List->Data[List->Prev[List->Tail]];
 
 	fprintf(LogFile, "Pop %d at the back\n", Value);	
 	ListErase(List, List->Prev[List->Tail]);
 
-	if(ListOK(List)) return LIST_ERROR;
+	if(LIST_OK(List)) return LIST_ERROR;
 
 	return Value;
 }
 
 ListErrors ListErase(List* List, const size_t Position)  // return pos next element ?
 {
-	assert(List != nullptr);
-	assert(Position < List->Capacity);
-	assert(Position != 0);   // copypaste
-	assert(Position != 1);
-	assert(List->Prev[Position] != PoisonValue);
-
-	if(ListOK(List)) return LIST_ERROR;
+	if(CHECK_LIST_AND_POSITION(List, Position)) return LIST_ERROR;
 
 	List->Next[List->Prev[Position]] = List->Next[Position];
 	List->Prev[List->Next[Position]] = List->Prev[Position];
@@ -170,7 +157,7 @@ ListErrors ListErase(List* List, const size_t Position)  // return pos next elem
 	 
 	List->Size -= 1;
 
-	if(ListOK(List)) return LIST_ERROR;
+	if(LIST_OK(List)) return LIST_ERROR;
 
 	fprintf(LogFile,"Delete element on position %ld\n", Position);
 	LIST_DUMP(List);
@@ -178,29 +165,35 @@ ListErrors ListErase(List* List, const size_t Position)  // return pos next elem
 	return LIST_OK;
 }
 
+static ListErrors ReallocList (List* List, const size_t Size, 
+				const size_t Line, const char* File, const char* Function)
+{
+	Elemt* TempPtrData = (Elemt*) realloc(List->Data, sizeof(Elemt) * (Size + 2));  // auto free memory?
+	int* TempPtrNext = (int*) realloc(List->Next, sizeof(int) * (Size + 2));		
+	int* TempPtrPrev = (int*) realloc(List->Prev, sizeof(int) * (Size + 2));
+
+	if (TempPtrData == nullptr || TempPtrNext == nullptr || TempPtrPrev == nullptr) {
+		PRINT_ERROR("Not enough memory on your pc")
+		return NOT_ENOUGH_MEMORY;
+	}
+
+	List->Next = TempPtrNext;
+	List->Data = TempPtrData;	
+	List->Prev = TempPtrPrev;
+
+	return LIST_OK;
+}
+
 ListErrors ListResize(List* List, const size_t Size)
 {
-	assert(List != nullptr);
-
-	if(ListOK(List)) return LIST_ERROR;
+	if(LIST_OK(List)) return LIST_ERROR;
 
 	if (Size > (List->Capacity - 2)) {
 
-		Elemt* TemporPtr = (Elemt*) realloc(List->Data, sizeof(Elemt) * (Size + 2));  // auto free memory?
-		assert(TemporPtr != nullptr);
+		if (REALLOC_LIST(List, Size) != LIST_OK) {
+			return NOT_ENOUGH_MEMORY;
+		}
 
-		List->Data = TemporPtr;
-
-		int* TempPtr = (int*) realloc(List->Next, sizeof(int) * (Size + 2));
-		assert(TempPtr != nullptr);
-		
-		List->Next = TempPtr;
-
-		TempPtr = (int*) realloc(List->Prev, sizeof(int) * (Size + 2));
-		assert(TempPtr != nullptr);
-
-		List->Prev = TempPtr;
-		
 		for (size_t NumberElement = List->Capacity; NumberElement < (Size + 2); NumberElement++) {
 			List->Prev[NumberElement] = PoisonValue;
 			List->Data[NumberElement] = PoisonValue;
@@ -212,9 +205,9 @@ ListErrors ListResize(List* List, const size_t Size)
 		List->Capacity = (Size + 2);
 
 	} else if (Size < (List->Capacity - 2)) {
-		Elemt TempMassiveData[List->Size + 2] = { };
-		int TempMassiveNext[List->Size + 2] = { };
-		int TempMassivePrev[List->Size + 2] = { };  // make dynamic
+		Elemt TempMassiveData[List->Size + 2] = {0};
+		int TempMassiveNext[List->Size + 2] = {0};
+		int TempMassivePrev[List->Size + 2] = {0};  // make dynamic
 
 		while (List->Size > Size) {
 			ListPopBack(List);
@@ -270,13 +263,6 @@ ListErrors ListResize(List* List, const size_t Size)
 		List->Prev = TempPtrPrev;
 
 		List->Free = TailPosition;
-		for (; TotalPosition < (Size + 2); TotalPosition++) {
-			List->Prev[TotalPosition] = PoisonValue;
-			List->Data[TotalPosition] = PoisonValue;
-
-			List->Next[TotalPosition] = List->Free;
-			List->Free = TotalPosition;
-		}
 
 		if (List->Size > Size) {
 			List->Size = Size;
@@ -284,11 +270,16 @@ ListErrors ListResize(List* List, const size_t Size)
 
 		List->Capacity = Size + 2;
 
-	} else {
-		// strange request
-	}
+		for (; TotalPosition < (Size + 2); TotalPosition++) {
+			List->Prev[TotalPosition] = PoisonValue;
+			List->Data[TotalPosition] = PoisonValue;
 
-	if(ListOK(List)) return LIST_ERROR;
+			List->Next[TotalPosition] = List->Free;
+			List->Free = TotalPosition;
+		}
+	} 
+		
+	if(LIST_OK(List)) return LIST_ERROR;
 
 	fprintf(LogFile, "Resize list to size %ld\n", Size);
 	LIST_DUMP(List);
@@ -298,30 +289,15 @@ ListErrors ListResize(List* List, const size_t Size)
 
 ListErrors ListResize(List* List, const size_t Size, const Elemt Value)
 {
-	assert(List != nullptr);
-
-	if(ListOK(List)) return LIST_ERROR;
+	if(LIST_OK(List)) return LIST_ERROR;
 
 	if (Size > (List->Capacity - 2)) {
 
-		Elemt* TemporPtr = (Elemt*) realloc(List->Data, sizeof(Elemt) * (Size + 2));  // auto free memory?
-		assert(TemporPtr != nullptr);
+		if (REALLOC_LIST(List, Size) != LIST_OK) {
+			return NOT_ENOUGH_MEMORY;
+		}
 
-		List->Data = TemporPtr;
-
-		int* TempPtr = (int*) realloc(List->Next, sizeof(int) * (Size + 2));
-		assert(TempPtr != nullptr);
-		
-		List->Next = TempPtr;
-
-		TempPtr = (int*) realloc(List->Prev, sizeof(int) * (Size + 2));
-		assert(TempPtr != nullptr);
-
-		List->Prev = TempPtr;
-		
-		size_t NumberElement = List->Size + 2;
-
-		for (; NumberElement < (Size + 2); NumberElement++) {
+		for (size_t NumberElement = List->Size + 2; NumberElement < (Size + 2); NumberElement++) {
 			if (NumberElement == List->Capacity) {
 				List->Capacity++;
 				List->Next[NumberElement] = List->Free;
@@ -334,9 +310,9 @@ ListErrors ListResize(List* List, const size_t Size, const Elemt Value)
 		List->Size = Size;
 
 	} else if (Size < (List->Capacity - 2)) {
-		Elemt TempMassiveData[List->Size + 2] = { };
-		int TempMassiveNext[List->Size + 2] = { };
-		int TempMassivePrev[List->Size + 2] = { };  // make dynamic
+		Elemt TempMassiveData[List->Size + 2] = {0};
+		int TempMassiveNext[List->Size + 2] = {0};
+		int TempMassivePrev[List->Size + 2] = {0};  // make dynamic
 
 		while (List->Size > Size) {
 			ListPopBack(List);
@@ -392,6 +368,13 @@ ListErrors ListResize(List* List, const size_t Size, const Elemt Value)
 		List->Prev = TempPtrPrev;
 
 		List->Free = TailPosition;
+
+		if (List->Size > Size) {
+			List->Size = Size;
+		}
+
+		List->Capacity = Size + 2;
+
 		for (; TotalPosition < (Size + 2); TotalPosition++) {
 			List->Prev[TotalPosition] = PoisonValue;
 			List->Data[TotalPosition] = PoisonValue;
@@ -400,18 +383,9 @@ ListErrors ListResize(List* List, const size_t Size, const Elemt Value)
 			List->Free = TotalPosition;
 			ListPushBack(List, Value);
 		}
+	} 
 
-		if (List->Size > Size) {
-			List->Size = Size;
-		}
-
-		List->Capacity = Size + 2;
-
-	} else {
-		// strange request
-	}
-
-	if(ListOK(List)) return LIST_ERROR;
+	if(LIST_OK(List)) return LIST_ERROR;
 
 	fprintf(LogFile, "Resize list to size %ld and fill free cell with value %d\n", Size, Value);
 	LIST_DUMP(List);
@@ -423,10 +397,10 @@ ListErrors ListResize(List* List, const size_t Size, const Elemt Value)
 ListErrors ListCtor(List* List, size_t Capacity, const char* list_name,
 				    const size_t birth_line, const char* birth_file, const char* birth_function) 
 {    
-	assert(List != nullptr);
-	assert(Capacity > 0);    // think about Ctor after Dtor and about Ctor twice
+	assert(List != nullptr);   
  
 	LogFile = fopen(NameLogFile, "w");
+	assert(LogFile != nullptr);
 	atexit(EndProgramm);
 	
 	List->IsCtor = true;
@@ -468,7 +442,7 @@ ListErrors ListCtor(List* List, size_t Capacity, const char* list_name,
 
 	List->ErrorsInfo = 0;
 
-	if (ListOK(List)) return LIST_ERROR;
+	if (LIST_OK(List)) return LIST_ERROR;
 
 	fprintf(LogFile, "Fill list primary values\n");
 	LIST_DUMP(List);
@@ -478,11 +452,7 @@ ListErrors ListCtor(List* List, size_t Capacity, const char* list_name,
 
 ListErrors ListDtor(List* List)
 {
-	assert(List != nullptr);
-	assert(List->IsCtor == true);
-	assert(List->IsDtor == false); // copypaste
-
-	if (ListOK(List)) return LIST_ERROR;
+	if (LIST_OK(List)) return LIST_ERROR;
 
 	List->IsDtor = true;
 
@@ -491,9 +461,11 @@ ListErrors ListDtor(List* List)
 		List->Next[NumberElement] = PoisonValue;
 		List->Prev[NumberElement] = PoisonValue;
 	}
+
 	free(List->Data);
 	free(List->Next);
 	free(List->Prev);
+	
 	List->Capacity = PoisonValue;
 	List->Free = PoisonValue;
 	List->Head = PoisonValue;
@@ -503,24 +475,96 @@ ListErrors ListDtor(List* List)
 	return LIST_OK;
 }
 
-ListErrors ListOK(List* List)
+ListErrors ListOK(List* List, const size_t Line, 
+				  const char* File, const char* Function)
 {
-	return LIST_OK;
+	if (LogFile == nullptr) {
+		LogFile = fopen(NameLogFile, "w");
+	}
 
-	assert(List != nullptr);
-	assert(List->IsCtor == true);  // copypaste in all functions
-	assert(List->IsDtor == false);
+	if (List == nullptr) {
+		PRINT_ERROR("List is null ptr")
+		return LIST_NULLPTR;
+	}
+	if (List->IsCtor == false) {
+		PRINT_ERROR("List have not created yet")
+		return LIST_NOT_CTOR;
+	}
+	if (List->IsDtor == true) {
+		PRINT_ERROR("This list have already deleted")
+		return LIST_IS_DTOR;
+	}
 
-	if (List->Capacity == 0) ;
-	if (List->Size < List->Capacity) ;
-	if (List->Data == nullptr);
-	if (List->Next == nullptr);
-	if (List->Prev == nullptr);
+	if (List->Capacity == 0) {
+		PRINT_ERROR("List capacity equal zero")
+		List->ErrorsInfo |= NULL_CAPACITY;
+	}
+	if (List->Size > List->Capacity) {
+		PRINT_ERROR("List size > list capacity")
+		List->ErrorsInfo |= SIZE_GREATER_CAPACITY;
+	}
+	if (List->Data == nullptr) {
+		PRINT_ERROR("List data is null ptr")
+		List->ErrorsInfo |= NULL_DATA;
+	}
+	if (List->Next == nullptr) {
+		PRINT_ERROR("List next is null ptr")
+		List->ErrorsInfo |= NULL_NEXT;
+	}
+	if (List->Prev == nullptr) {
+		PRINT_ERROR("List prev is null ptr")
+		List->ErrorsInfo |= NULL_PREV;
+	}
+	if (List->Head != HeadPosition) {
+		PRINT_ERROR("Position of list head changed")
+		List->ErrorsInfo |= INCOR_HEAD_POS;
+	}
+	if (List->Tail != TailPosition) {
+		PRINT_ERROR("Position of list tail changed")
+		List->ErrorsInfo |= INCOR_TAIL_POS;
+	}
+	if (List->Free >= List->Capacity) {
+		PRINT_ERROR("Incorrect position of list free")
+		List->ErrorsInfo |= INCOR_FREE_POS;
+	}								
 
-	for (size_t NumberElement = 0; NumberElement < List->Size; NumberElement) {
-		List->Prev[List->Next[List->Head]] = List->Head;
+	if (List->ErrorsInfo != 0) {
+		return LIST_ERROR;
+	} else {
+		return LIST_OK;	
+	}
+}
 
-	} //
+ListErrors CheckListAndPosition(List* List, size_t Position, const size_t Line, 
+				  			 const char* File, const char* Function)
+{
+	ListErrors ListErr = ListOK(List, Line, File, Function);
+	if (ListErr != LIST_ERROR && ListErr != LIST_OK) {
+		return ListErr;
+	} 
+
+	if (Position == 1) {
+		PRINT_ERROR("You can not do something with the list tail")
+		List->ErrorsInfo |= POS_EQUALS_TAIL;
+	}
+	if (Position == 0) {
+		PRINT_ERROR("You can not do something with the list head")
+		List->ErrorsInfo |= POS_EQUALS_HEAD;
+	}
+	if (Position >= List->Capacity) {
+		PRINT_ERROR("Position is greater than the list capacity")
+		List->ErrorsInfo |= POS_GREATER_CAPACITY;
+	}
+	if (List->Prev != nullptr && List->Prev[Position] == PoisonValue) {
+		PRINT_ERROR("Element on this position is not a list element")
+		List->ErrorsInfo |= ELEMENT_ON_POS_NOT_EXIST;
+	}
+
+	if (List->ErrorsInfo != 0) {
+		return LIST_ERROR;
+	} else {
+		return LIST_OK;	
+	}
 }
 
 ListErrors ListDump(List* List, const size_t NLine, 
