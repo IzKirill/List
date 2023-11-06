@@ -14,6 +14,7 @@ static void EndProgramm(void);
 
 static ListErrors ReallocList(List* List, const size_t Size, 
 				const size_t Line, const char* File, const char* Function);
+static ListErrors ListResizeDown (List* List, const size_t Size, const Elemt Value);
 
 static size_t Counter = 1;
 
@@ -218,77 +219,8 @@ ListErrors ListResize(List* List, const size_t Size)
 		List->Capacity = (Size + 2);
 
 	} else if (Size < (List->Capacity - 2)) {
-		Elemt TempMassiveData[List->Size + 2] = {0};
-		int TempMassiveNext[List->Size + 2] = {0};
-		int TempMassivePrev[List->Size + 2] = {0};  // make dynamic
-
-		while (List->Size > Size) {
-			ListPopBack(List);
-		}
-
-		TempMassiveData[HeadPosition] = PoisonValue;
-		TempMassivePrev[HeadPosition] = PrevHeadIndicator;
-		TempMassiveData[TailPosition] = PoisonValue;
-		TempMassiveNext[TailPosition] = NextTailIndicator;
-		if (Size > 0) {
-			TempMassiveNext[HeadPosition] = 2;
-			TempMassivePrev[TailPosition] = List->Size + 1;
-		} else {
-			TempMassiveNext[HeadPosition] = 1;
-			TempMassivePrev[TailPosition] = 0;
-		}
-
-		size_t TotalPosition = 2;
-		size_t PrevIndex = 0;
-		size_t ListIndex = List->Next[List->Head];
-
-		for (; TotalPosition < (List->Size + 2); TotalPosition++) {
-			TempMassiveData[TotalPosition] = List->Data[ListIndex];
-			ListIndex = List->Next[ListIndex];
-
-			if (TotalPosition == (List->Size + 1)) {
-				TempMassiveNext[TotalPosition] = TailPosition;
-			} else {
-				TempMassiveNext[TotalPosition] = TotalPosition + 1;
-			}
-			TempMassivePrev[TotalPosition] = PrevIndex;
-
-			PrevIndex = TotalPosition;
-		}
-	
-		Elemt* TempPtrData = (Elemt*) realloc(List->Data, sizeof(Elemt) * (Size + 2));
-		assert(TempPtrData != nullptr);
-
-		int* TempPtrNext = (int*) realloc(List->Next, sizeof(int) * (Size + 2));
-		assert(TempPtrNext != nullptr);
-
-		int* TempPtrPrev = (int*) realloc(List->Prev, sizeof(int) * (Size + 2));
-		assert(TempPtrPrev != nullptr);
-
-		for (size_t NumberElement = 0; NumberElement < TotalPosition; NumberElement++) {
-			TempPtrData[NumberElement] = TempMassiveData[NumberElement];
-			TempPtrNext[NumberElement] = TempMassiveNext[NumberElement];
-			TempPtrPrev[NumberElement] = TempMassivePrev[NumberElement];
-		}
-
-		List->Data = TempPtrData;
-		List->Next = TempPtrNext;
-		List->Prev = TempPtrPrev;
-
-		List->Free = TailPosition;
-
-		if (List->Size > Size) {
-			List->Size = Size;
-		}
-
-		List->Capacity = Size + 2;
-
-		for (; TotalPosition < (Size + 2); TotalPosition++) {
-			List->Prev[TotalPosition] = PoisonValue;
-			List->Data[TotalPosition] = PoisonValue;
-
-			List->Next[TotalPosition] = List->Free;
-			List->Free = TotalPosition;
+		if (ListResizeDown(List, Size, PoisonValue) == NOT_ENOUGH_MEMORY) {
+			return NOT_ENOUGH_MEMORY;
 		}
 	} 
 		
@@ -325,78 +257,8 @@ ListErrors ListResize(List* List, const size_t Size, const Elemt Value)
 		List->Size = Size;
 
 	} else if (Size < (List->Capacity - 2)) {
-		Elemt TempMassiveData[List->Size + 2] = {0};
-		int TempMassiveNext[List->Size + 2] = {0};
-		int TempMassivePrev[List->Size + 2] = {0};  // make dynamic
-
-		while (List->Size > Size) {
-			ListPopBack(List);
-		}
-
-		TempMassiveData[HeadPosition] = PoisonValue;
-		TempMassivePrev[HeadPosition] = PrevHeadIndicator;
-		TempMassiveData[TailPosition] = PoisonValue;
-		TempMassiveNext[TailPosition] = NextTailIndicator;
-		if (Size > 0) {
-			TempMassiveNext[HeadPosition] = 2;
-			TempMassivePrev[TailPosition] = List->Size + 1;
-		} else {
-			TempMassiveNext[HeadPosition] = 1;
-			TempMassivePrev[TailPosition] = 0;
-		}
-
-		size_t TotalPosition = 2;
-		size_t PrevIndex = 0;
-		size_t ListIndex = List->Next[List->Head];
-
-		for (; TotalPosition < (List->Size + 2); TotalPosition++) {
-			TempMassiveData[TotalPosition] = List->Data[ListIndex];
-			ListIndex = List->Next[ListIndex];
-
-			if (TotalPosition == (List->Size + 1)) {
-				TempMassiveNext[TotalPosition] = TailPosition;
-			} else {
-				TempMassiveNext[TotalPosition] = TotalPosition + 1;
-			}
-			TempMassivePrev[TotalPosition] = PrevIndex;
-
-			PrevIndex = TotalPosition;
-		}
-	
-		Elemt* TempPtrData = (Elemt*) realloc(List->Data, sizeof(Elemt) * (Size + 2));
-		assert(TempPtrData != nullptr);
-
-		int* TempPtrNext = (int*) realloc(List->Next, sizeof(int) * (Size + 2));
-		assert(TempPtrNext != nullptr);
-
-		int* TempPtrPrev = (int*) realloc(List->Prev, sizeof(int) * (Size + 2));
-		assert(TempPtrPrev != nullptr);
-
-		for (size_t NumberElement = 0; NumberElement < TotalPosition; NumberElement++) {
-			TempPtrData[NumberElement] = TempMassiveData[NumberElement];
-			TempPtrNext[NumberElement] = TempMassiveNext[NumberElement];
-			TempPtrPrev[NumberElement] = TempMassivePrev[NumberElement];
-		}
-
-		List->Data = TempPtrData;
-		List->Next = TempPtrNext;
-		List->Prev = TempPtrPrev;
-
-		List->Free = TailPosition;
-
-		if (List->Size > Size) {
-			List->Size = Size;
-		}
-
-		List->Capacity = Size + 2;
-
-		for (; TotalPosition < (Size + 2); TotalPosition++) {
-			List->Prev[TotalPosition] = PoisonValue;
-			List->Data[TotalPosition] = PoisonValue;
-
-			List->Next[TotalPosition] = List->Free;
-			List->Free = TotalPosition;
-			ListPushBack(List, Value);
+		if (ListResizeDown(List, Size, Value) == NOT_ENOUGH_MEMORY) {
+			return NOT_ENOUGH_MEMORY;
 		}
 	} 
 
@@ -405,6 +267,85 @@ ListErrors ListResize(List* List, const size_t Size, const Elemt Value)
 
 	fprintf(LogFile, "Resize list to size %ld and fill free cell with value %d\n", Size, Value);
 	LIST_DUMP(List);
+
+	return LIST_OK;
+}
+
+ListErrors ListResizeDown (List* List, const size_t Size, const Elemt Value)
+{
+	Elemt TempMassiveData[List->Size + 2] = {0};
+	int TempMassiveNext[List->Size + 2] = {0};
+	int TempMassivePrev[List->Size + 2] = {0};  // make dynamic
+
+	while (List->Size > Size) {
+		ListPopBack(List);
+	}
+
+	TempMassiveData[HeadPosition] = PoisonValue;
+	TempMassivePrev[HeadPosition] = PrevHeadIndicator;
+	TempMassiveData[TailPosition] = PoisonValue;
+	TempMassiveNext[TailPosition] = NextTailIndicator;
+	if (Size > 0) {
+		TempMassiveNext[HeadPosition] = 2;
+		TempMassivePrev[TailPosition] = List->Size + 1;
+	} else {
+		TempMassiveNext[HeadPosition] = 1;
+		TempMassivePrev[TailPosition] = 0;
+	}
+	
+	size_t TotalPosition = 2;
+	size_t PrevIndex = 0;
+	size_t ListIndex = List->Next[List->Head];
+		
+	for (; TotalPosition < (List->Size + 2); TotalPosition++) {
+		TempMassiveData[TotalPosition] = List->Data[ListIndex];
+		ListIndex = List->Next[ListIndex];
+	
+		if (TotalPosition == (List->Size + 1)) {
+			TempMassiveNext[TotalPosition] = TailPosition;
+		} else {
+			TempMassiveNext[TotalPosition] = TotalPosition + 1;
+		}
+		TempMassivePrev[TotalPosition] = PrevIndex;
+
+		PrevIndex = TotalPosition;
+	}
+	
+	Elemt* TempPtrData = (Elemt*) realloc(List->Data, sizeof(Elemt) * (Size + 2));
+	CHECKCONDITION(List->Prev == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
+
+	int* TempPtrNext = (int*) realloc(List->Next, sizeof(int) * (Size + 2));
+	CHECKCONDITION(List->Prev == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
+
+	int* TempPtrPrev = (int*) realloc(List->Prev, sizeof(int) * (Size + 2));
+	CHECKCONDITION(List->Prev == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
+
+	for (size_t NumberElement = 0; NumberElement < TotalPosition; NumberElement++) {
+		TempPtrData[NumberElement] = TempMassiveData[NumberElement];
+		TempPtrNext[NumberElement] = TempMassiveNext[NumberElement];
+		TempPtrPrev[NumberElement] = TempMassivePrev[NumberElement];
+	}
+	
+	List->Data = TempPtrData;
+	List->Next = TempPtrNext;
+	List->Prev = TempPtrPrev;
+
+	List->Free = TailPosition;
+
+	if (List->Size > Size) {
+		List->Size = Size;
+	}
+
+	List->Capacity = Size + 2;
+
+	for (; TotalPosition < (Size + 2); TotalPosition++) {
+		List->Prev[TotalPosition] = PoisonValue;
+		List->Data[TotalPosition] = PoisonValue;
+		
+		List->Next[TotalPosition] = List->Free;
+		List->Free = TotalPosition;
+		if (Value != PoisonValue) ListPushBack(List, Value);
+	}
 
 	return LIST_OK;
 }
@@ -495,13 +436,13 @@ ListErrors ListCtor(List* List, size_t Capacity, const char* list_name,
 	List->Capacity = Capacity + 2;
 
 	List->Data = (Elemt*) calloc(List->Capacity, sizeof(Elemt));
-	assert(List->Data != nullptr);
+	CHECKCONDITION(List->Data == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
 
 	List->Next = (int*) calloc(List->Capacity, sizeof(int));
-	assert(List->Next != nullptr);
+	CHECKCONDITION(List->Next == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
 
 	List->Prev = (int*) calloc(List->Capacity, sizeof(int));
-	assert(List->Prev != nullptr);
+	CHECKCONDITION(List->Prev == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
 
 	for (size_t NumberElement = 0; NumberElement < List->Capacity; NumberElement++) {
 		List->Data[NumberElement] = PoisonValue;
@@ -562,7 +503,7 @@ ListErrors ListOK(List* List, const size_t Line,
 				  const char* File, const char* Function)
 {
 	if (LogFile == nullptr) {
-		LogFile = fopen(NameLogFile, "w");
+		LogFile = fopen(NameLogFile, "w");		
 	}
 
 	if (List == nullptr) {
@@ -662,6 +603,7 @@ ListErrors ListDump(List* List, const size_t NLine,
 	
 	fprintf(LogFile, "<pre>\n");
 
+	fprintf(LogFile, "<font color=\"844EFF\">");
 	fprintf(LogFile,  "List[%p] %s from %s(%ld) %s ", List, List->Info.list_name,
 	List->Info.birth_file, List->Info.birth_line, List->Info.birth_function);
 
@@ -682,7 +624,7 @@ ListErrors ListDump(List* List, const size_t NLine,
 	fprintf(LogFile,  "    List Previous Element[%p]\n    {\n        ", List->Prev);
 	DUMP_PRINT_MASSIVE(List->Prev);
 
-	fprintf(LogFile, "}\n "); 
+	fprintf(LogFile, "}\n </font>"); 
 
 #ifndef NO_PNG
 	fprintf(LogFile, "\n <img src = DotPng/List%ld.png width 25%%>\n", 100 + Counter);
