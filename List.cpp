@@ -2,8 +2,9 @@
 #include <malloc.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include "DotList.h"
-#include "Listh"
+#include "List.h"
 
 #define REALLOC_LIST(List, Size) ReallocList((List), (Size), __LINE__,   \
 						__FILE__,__PRETTY_FUNCTION__)
@@ -70,7 +71,7 @@ ListErrors ListInsert(List* List, const size_t Position,
 	Error = LIST_OK(List);
 	if (Error) return Error;
 
-	fprintf(LogFile, "Add %ld elements with value %d from position %ld\n", CountElements Value, Position);
+	fprintf(LogFile, "Add %ld elements with value %ld from position %ld\n", CountElements, Value, Position);
 	LIST_DUMP(List);
 
 	return LIST_OK;
@@ -177,7 +178,7 @@ size_t ListErase(List* List, const size_t Position)
 	ListErrors Error = CHECK_LIST_AND_POSITION(List, Position);
 	if(Error) return Error;
 
-	size_t NextElement = List->Next[List->Position];
+	size_t NextElement = List->Next[Position];
 
 	List->Next[List->Prev[Position]] = List->Next[Position];
 	List->Prev[List->Next[Position]] = List->Prev[Position];
@@ -205,11 +206,12 @@ ListErrors ListErase(List* List, const size_t Begin, const size_t End)
 	ListErrors Error2 = CHECK_LIST_AND_POSITION(List, End);
 	if(Error1 || Error2) return (Error1 != LIST_OK) ? Error1 : Error2;
 
-	while (Begin < End) {
-		if (List->Prev[Begin] != PoisonValue) {
-			ListErase(List, Begin);
+	size_t Index = Begin;
+	while (Index < End) {
+		if (List->Prev[Index] != PoisonValue) {
+			ListErase(List, Index);
 		}
-		Begin++;
+		Index++;
 	}	
 
 	Error1 = LIST_OK(List);
@@ -224,18 +226,26 @@ ListErrors ListErase(List* List, const size_t Begin, const size_t End)
 static ListErrors ReallocList (List* List, const size_t Size, 
 				const size_t Line, const char* File, const char* Function)
 {
-	Elemt* TempPtrData = (Elemt*) realloc(List->Data, sizeof(Elemt) * (Size + 2));  // auto free memory?
-	int* TempPtrNext = (int*) realloc(List->Next, sizeof(int) * (Size + 2));		
-	int* TempPtrPrev = (int*) realloc(List->Prev, sizeof(int) * (Size + 2));
+	Elemt* TempPtr = (Elemt*) calloc((Size + 2) * (2 * sizeof(int) + sizeof(Elemt)), sizeof(char));  
 
-	if (TempPtrData == nullptr || TempPtrNext == nullptr || TempPtrPrev == nullptr) {
+	if (TempPtr == nullptr) {
 		PRINT_ERROR("Not enough memory on your pc")
 		return NOT_ENOUGH_MEMORY;
 	}
 
-	List->Next = TempPtrNext;
-	List->Data = TempPtrData;	
-	List->Prev = TempPtrPrev;
+	int* PastNext = List->Next;
+	int* PastPrev = List->Prev;
+
+	List->Next = (int*) ((char*) TempPtr + sizeof(Elemt) * (Size + 2));
+	List->Prev = (int*) ((char*) List->Next + sizeof(int) * (Size + 2));;
+
+	memmove(TempPtr, List->Data, List->Capacity * sizeof(Elemt));
+	memmove(List->Next, PastNext, List->Capacity * sizeof(int));
+	memmove(List->Prev, PastPrev, List->Capacity * sizeof(int));
+
+	free(List->Data);
+
+	List->Data = TempPtr;
 
 	return LIST_OK;
 }
@@ -316,9 +326,11 @@ ListErrors ListResize(List* List, const size_t Size, const Elemt Value)
 
 ListErrors ListResizeDown (List* List, const size_t Size, const Elemt Value)
 {
-	Elemt TempMassiveData[List->Size + 2] = {0};
-	int TempMassiveNext[List->Size + 2] = {0};
-	int TempMassivePrev[List->Size + 2] = {0};  // make dynamic
+	Elemt* TempMassiveData = (Elemt*) calloc((List->Size + 2) * (sizeof(Elemt) + sizeof(int) * 2), sizeof(char));
+	CHECKCONDITION(TempMassiveData == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
+
+	int* TempMassiveNext = (int*) ((char*) TempMassiveData + sizeof(Elemt) * (List->Size + 2));
+	int* TempMassivePrev = (TempMassiveNext + List->Size + 2);
 
 	while (List->Size > Size) {
 		ListPopBack(List);
@@ -353,25 +365,20 @@ ListErrors ListResizeDown (List* List, const size_t Size, const Elemt Value)
 
 		PrevIndex = TotalPosition;
 	}
+
+	Elemt* TempPtr = (Elemt*) calloc((Size + 2) * (2 * sizeof(int) + sizeof(Elemt)), sizeof(char));  
+	CHECKCONDITION(TempPtr == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
+
+	List->Next = (int*) ((char*) TempPtr + sizeof(Elemt) * (Size + 2));
+	List->Prev = (int*) ((char*) List->Next + sizeof(int) * (Size + 2));
+
+	memmove(TempPtr, TempMassiveData, TotalPosition * sizeof(Elemt));
+	memmove(List->Next, TempMassiveNext, TotalPosition * sizeof(int));
+	memmove(List->Prev, TempMassivePrev, TotalPosition * sizeof(int));
 	
-	Elemt* TempPtrData = (Elemt*) realloc(List->Data, sizeof(Elemt) * (Size + 2));
-	CHECKCONDITION(List->Prev == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
-
-	int* TempPtrNext = (int*) realloc(List->Next, sizeof(int) * (Size + 2));
-	CHECKCONDITION(List->Prev == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
-
-	int* TempPtrPrev = (int*) realloc(List->Prev, sizeof(int) * (Size + 2));
-	CHECKCONDITION(List->Prev == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
-
-	for (size_t NumberElement = 0; NumberElement < TotalPosition; NumberElement++) {
-		TempPtrData[NumberElement] = TempMassiveData[NumberElement];
-		TempPtrNext[NumberElement] = TempMassiveNext[NumberElement];
-		TempPtrPrev[NumberElement] = TempMassivePrev[NumberElement];
-	}
-	
-	List->Data = TempPtrData;
-	List->Next = TempPtrNext;
-	List->Prev = TempPtrPrev;
+	free(TempMassiveData);
+	free(List->Data);
+	List->Data = TempPtr;
 
 	List->Free = TailPosition;
 
@@ -478,14 +485,11 @@ ListErrors ListCtor(List* List, size_t Capacity, const char* list_name,
 
 	List->Capacity = Capacity + 2;
 
-	List->Data = (Elemt*) calloc(List->Capacity, sizeof(Elemt));
+	List->Data = (Elemt*) calloc(List->Capacity * (2 * sizeof(int) + sizeof(Elemt)), sizeof(char));
 	CHECKCONDITION(List->Data == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
-
-	List->Next = (int*) calloc(List->Capacity, sizeof(int));
-	CHECKCONDITION(List->Next == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
-
-	List->Prev = (int*) calloc(List->Capacity, sizeof(int));
-	CHECKCONDITION(List->Prev == nullptr, NOT_ENOUGH_MEMORY, "Not enough memory on your pc");
+	
+	List->Next = (int*) ((char*) List->Data + sizeof(Elemt) * List->Capacity); 
+	List->Prev = (int*) ((char*) List->Next + sizeof(int) * List->Capacity);
 
 	for (size_t NumberElement = 0; NumberElement < List->Capacity; NumberElement++) {
 		List->Data[NumberElement] = PoisonValue;
@@ -530,8 +534,6 @@ ListErrors ListDtor(List* List)
 	}
 
 	free(List->Data);
-	free(List->Next);
-	free(List->Prev);
 	
 	List->Capacity = PoisonValue;
 	List->Free = PoisonValue;
@@ -692,7 +694,11 @@ ListErrors ListDump(List* List, const size_t NLine,
 
 	GeneratePng[39] = '0' + Counter % 10;
 	if (Counter > 9) {
-		GeneratePng[38] = '0' + Counter / 10;}
+		GeneratePng[38] = '0' + Counter / 10;
+	}
+	if (Counter > 99) {
+		GeneratePng[37] = '0' + Counter / 100;
+	}
 
 	system(GeneratePng);
 	Counter++;

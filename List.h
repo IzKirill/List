@@ -41,12 +41,12 @@ fprintf(LogFile, "<font color=\"red\">ERROR:</font> " ErrorMessage " in %s(%ld) 
                                                                 fprintf(LogFile,"<font color=\"red\">ERROR:</font> %s in %s(%d) %s" "\n",  \
 																	ErrorMessage, __FILE__, __LINE__,__PRETTY_FUNCTION__); \
                                                                 return ErrorCode; \
-                                                            }    }  while(0) 
+                                                            }    }  while(0) 															
 
 #ifndef RELEASE
 	#define LIST_DUMP(List) ListDump(List,__LINE__,__FILE__,__PRETTY_FUNCTION__)
 #else
-	#define LIST_DUMP(List) 
+	#define LIST_DUMP(List)
 #endif
 
 const char NameLogFile[] = "ListLogs.htm";
@@ -71,7 +71,7 @@ struct BirthInfo {
 struct List {
 	Elemt* Data;
 	int* Next;
-	int* Prev;    // make size_t ?
+	int* Prev;    
 	size_t Head;
 	size_t Tail;                       
 	size_t Size;     
@@ -149,9 +149,6 @@ Elemt ListFront(List* List);
 Elemt ListBack(List* List);
 
 ListErrors ListClear(List* List); 
-
-// линиризация o(size) с двусвязанным превом и некстом
-// calloc сразу на 3 * capacity
 
 #endif
 
