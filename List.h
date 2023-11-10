@@ -7,6 +7,7 @@
                                   __LINE__,__FILE__,__PRETTY_FUNCTION__)
 
 // #define NO_PNG - Dump without png
+// #define RELEASE - Withou Dump
 
 #define LIST_OK(List) ListOK((List), __LINE__, \
 						     __FILE__,__PRETTY_FUNCTION__)
