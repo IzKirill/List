@@ -176,7 +176,7 @@ size_t ListPopBack (List* List)
 size_t ListErase(List* List, const size_t Position)  
 {
 	ListErrors Error = CHECK_LIST_AND_POSITION(List, Position);
-	if(Error) return Error;
+	if (Error) return Error;
 
 	size_t NextElement = List->Next[Position];
 
@@ -204,7 +204,7 @@ ListErrors ListErase(List* List, const size_t Begin, const size_t End)
 {
 	ListErrors Error1 = CHECK_LIST_AND_POSITION(List, Begin);
 	ListErrors Error2 = CHECK_LIST_AND_POSITION(List, End);
-	if(Error1 || Error2) return (Error1 != LIST_OK) ? Error1 : Error2;
+	if (Error1 || Error2) return (Error1 != LIST_OK) ? Error1 : Error2;
 
 	size_t Index = Begin;
 	while (Index < End) {
@@ -394,7 +394,8 @@ ListErrors ListResizeDown (List* List, const size_t Size, const Elemt Value)
 		
 		List->Next[TotalPosition] = List->Free;
 		List->Free = TotalPosition;
-		if (Value != PoisonValue) ListPushBack(List, Value);
+		if (Value != PoisonValue) 
+			ListPushBack(List, Value);
 	}
 
 	return LIST_OK;
@@ -706,6 +707,3 @@ ListErrors ListDump(List* List, const size_t NLine,
 
 	return LIST_OK;
 }
-
-
-

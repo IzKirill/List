@@ -37,8 +37,9 @@ fprintf(LogFile, "<font color=\"red\">ERROR:</font> " ErrorMessage " in %s(%ld) 
 
 #define CHECKCONDITION(Condition, ErrorCode, ErrorMessage) do {              \
                                                             if (Condition)  { \
-                                                                if (LogFile == NULL) \
+                                                                if (LogFile == NULL) {\
                                                                     LogFile = fopen(NameLogFile, "w"); \
+																	atexit(EndProgramm); }     \
                                                                 fprintf(LogFile,"<font color=\"red\">ERROR:</font> %s in %s(%d) %s" "\n",  \
 																	ErrorMessage, __FILE__, __LINE__,__PRETTY_FUNCTION__); \
                                                                 return ErrorCode; \
@@ -152,6 +153,3 @@ Elemt ListBack(List* List);
 ListErrors ListClear(List* List); 
 
 #endif
-
-
-
